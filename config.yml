@@ -1,0 +1,113 @@
+detectors:
+  coral:
+    type: edgetpu
+    device: usb
+
+mqtt:
+  enabled: true
+  host: 192.168.xx.xx
+  user: <username>
+  password: <password>
+  topic_prefix: frigate
+  stats_interval: 60
+
+ffmpeg:
+  global_args: -hide_banner -loglevel warning -threads 2
+  hwaccel_args: preset-vaapi
+  input_args: preset-rtsp-restream
+
+birdseye:
+  enabled: false
+
+objects:
+  track:
+    - person
+    - car
+    - cat
+    - dog
+
+snapshots:
+  enabled: true
+  timestamp: false
+  bounding_box: true
+  quality: 99
+  retain:
+    default: 7
+
+motion:
+  threshold: 30
+  contour_area: 10
+  lightning_threshold: 0.8
+
+detect:
+  stationary:
+    interval: 50
+    threshold: 70
+
+record:
+  enabled: true
+  retain:
+    days: 2 
+    mode: motion
+  events:
+    retain:
+      default: 15 
+      mode: active_objects
+    pre_capture: 5
+    post_capture: 5
+
+go2rtc:
+  streams:
+    exterieur1: # Annke C800 main stream
+      - rtsp://######:####@192.168.xx.xx:554/Streaming/Channels/101
+    exterieur1_sub: # Annke C800 main stream with 1280x720 to simulate best substream 
+      - "ffmpeg:exterieur1#video=h264#width=1280#height=720#media=video#raw=-fpsmax 10#hardware=vaapi"
+
+cameras:
+  exterieur1: # Annke C800 camera
+    enabled: true
+    #detect:
+      #fps: 5
+    objects:
+      filters:
+        person:
+          threshold: 0.66
+          min_score: 0.4
+    ffmpeg:
+      inputs:
+        - path: rtsp://######:####@192.168.xx.xx:554/Streaming/Channels/101
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/exterieur1_sub # Using custom substream from go2rtc for detection.
+          roles:
+            - detect
+      output_args:
+        record: -f segment -segment_time 10 -segment_format mp4 -reset_timestamps 1 -strftime 1 -c:v copy -tag:v hvc1 -bsf:v hevc_mp4toannexb -c:a aac
+  interieur1: # Foscam C1 camera
+    enabled: true
+    objects:
+      track:
+        - person
+    ffmpeg:
+      inputs:
+        - path: rtsp://#######:#######@192.168.xx.xx:554/videoMain
+          input_args: preset-rtsp-generic
+          roles:
+            - detect
+            - record
+  garage: # Wanswiew W4 camera 
+    enabled: true
+    objects:
+      track:
+        - person
+      filters:
+        person:
+          min_score: 0.4 # min score for object to initiate tracking (default: 0.5)
+          threshold: 0.78 # min decimal percentage for tracked object's computed score to be considered a true positive (default: 0.7)
+    ffmpeg:
+      inputs:
+        - path: rtsp://#####:######@192.168.xx.xx:554/live/ch0
+          roles:
+            - record
+            - detect
+version: 0.14
