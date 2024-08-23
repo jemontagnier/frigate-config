@@ -20,6 +20,17 @@
 
 ## Frigate Customization 
 
+Annke C800 main stream configuration:
+
+    Resolution: 3840x2160
+    Bit rate type: Constant 
+    Frame rate: 15
+    Max. bit rate: 2048 
+    Video encoding: H.265
+    H.265+: OFF
+    Frame interval: 30
+    SVC: OFF
+
 Because Annke C800 maximum substream resolution is low (640x480), I use go2rtc to create a custom substream (1280x720) instead of using main stream to detect role.
 This is consuming few cpu than using main stream on detect & record and detection is very better on small object.
 
